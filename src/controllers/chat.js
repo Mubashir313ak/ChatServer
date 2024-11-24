@@ -2,11 +2,18 @@ const Message = require("../models/message");
 
 exports.sendMessage = async (req, res) => {
   try {
-    const { sender, reciever, message } = req.body;
+    const sender = req.user._id; // Sender is derived from the authenticated user
+    const { receiver, message } = req.body;
+
+    if (!receiver || !message) {
+      return res
+        .status(400)
+        .json({ error: "Receiver and message are required" });
+    }
 
     const newMessage = new Message({
       sender,
-      reciever,
+      receiver,
       message,
     });
 
@@ -25,8 +32,8 @@ exports.getMessages = async (req, res) => {
 
     const messages = await Message.find({
       $or: [
-        { sender: userId, reciever: chatWith },
-        { sender: chatWith, reciever: userId },
+        { sender: userId, receiver: chatWith },
+        { sender: chatWith, receiver: userId },
       ],
     }).sort({ createdAt: 1 });
 

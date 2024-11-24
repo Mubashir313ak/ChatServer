@@ -49,3 +49,21 @@ exports.getUserProfile = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// Fetch all users except the logged-in user
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user._id } });
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+// Fetch all users except the logged-in user
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user._id } });
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
