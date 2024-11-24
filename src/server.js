@@ -1,14 +1,17 @@
 const express = require("express");
-const http = require("http"); // Required for integrating Socket.IO
-const { Server } = require("socket.io"); // Import Socket.IO
+const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
 const userRoutes = require("./routes/user");
 const chatRoutes = require("./routes/chat");
+
 const app = express();
-const server = http.createServer(app); // Wrap the app with an HTTP server
+const http = require("http");
+
+// Socket.IO setup
+const server = http.createServer(app); // Keep this to work with Socket.IO
 const io = new Server(server, {
   cors: {
     origin: "*", // Allow requests from any origin
@@ -37,14 +40,12 @@ app.use("/api/chat", chatRoutes);
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // Listen for joining a chat
   socket.on("joinChat", ({ userId, chatWith }) => {
     const room = [userId, chatWith].sort().join("_"); // Generate unique room ID
     socket.join(room);
     console.log(`User ${userId} joined room ${room}`);
   });
 
-  // Listen for messages and broadcast them
   socket.on("sendMessage", (messageData) => {
     const { sender, receiver, message } = messageData;
     const room = [sender, receiver].sort().join("_");
@@ -56,6 +57,5 @@ io.on("connection", (socket) => {
   });
 });
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Vercel handles listening for requests, so we will export the server function
+module.exports = app;
