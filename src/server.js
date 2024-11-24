@@ -1,18 +1,17 @@
 const express = require("express");
+const http = require("http"); // Required for integrating Socket.IO
+const { Server } = require("socket.io"); // Import Socket.IO
 const mongoose = require("mongoose");
 const cors = require("cors");
-const http = require("http");
-const socketIO = require("socket.io");
 require("dotenv").config();
 
 const userRoutes = require("./routes/user");
 const chatRoutes = require("./routes/chat");
-
 const app = express();
-const server = http.createServer(app);
-const io = socketIO(server, {
+const server = http.createServer(app); // Wrap the app with an HTTP server
+const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "*", // Allow requests from any origin
     methods: ["GET", "POST"],
   },
 });
@@ -21,7 +20,7 @@ const io = socketIO(server, {
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
+// MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -34,12 +33,22 @@ mongoose
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Socket.io
+// Socket.IO connection
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("send_message", (data) => {
-    io.emit("receive_message", data); // Broadcast to all connected clients
+  // Listen for joining a chat
+  socket.on("joinChat", ({ userId, chatWith }) => {
+    const room = [userId, chatWith].sort().join("_"); // Generate unique room ID
+    socket.join(room);
+    console.log(`User ${userId} joined room ${room}`);
+  });
+
+  // Listen for messages and broadcast them
+  socket.on("sendMessage", (messageData) => {
+    const { sender, receiver, message } = messageData;
+    const room = [sender, receiver].sort().join("_");
+    io.to(room).emit("receiveMessage", messageData); // Emit to the room
   });
 
   socket.on("disconnect", () => {
@@ -47,6 +56,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Server
+// Start the server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
